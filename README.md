@@ -15,7 +15,7 @@ It should be trivial to host this on your own hardware.
 
 I'm more of a 'hack at it until it works' person than an actual programmer, so apologies for my terrible coding practices.
 
-A hosted version is available at [here](https://omnivore-to-pdf.fairlygood.net).
+A hosted version is available [here](https://omnivore-to-pdf.fairlygood.net).
 
 ## Installation
 
