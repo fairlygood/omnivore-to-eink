@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omnivore PDF Generator Settings</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.1/js.cookie.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <style>
+       :root {
+            --bg: #FFEA9F;
+            --accent: black;
+            --accent-hover: #8a8888;
+            --accent-bg: white;
+            --accent-text: white;
+        }
+        textarea, select, input, progress {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: #ffffff;
+        }
+
+        .formItem {
+            display: flex;
+            align-items: baseline;
+            flex-direction: column;
+        }
+
+        .settingsButton {
+            margin-top: 1.5rem;
+        }
+        .archiveyay {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Settings</h1>
+    
+    <form id="settingsForm">
+        <p>An API key is required to access your <a href="https://omnivore.app/">Omnivore</a> articles. You can generate one <a href="https://omnivore.app/settings/api">here</a>. Your API key is sent to the server, but is not stored or logged. Settings are stored in a local cookie. Check the box if you want the articles to be archived on Omnivore after the PDF is generated.</p>
+        <div class="formItem">
+                <input class="formInput" placeholder="API Key" type="text" id="apiKey" name="apiKey" required>
+                <div class="archiveyay"><label class="formLabel">Archive fetched articles:</label><input class="formInput" type="checkbox" id="archive" name="archive"></div>
+        </div>    
+
+        <button class="settingsButton" type="submit">Save Settings</button>
+    </form>
+    
+    <div id="status"></div>
+
+    <p><a href="/">Back to main page</a></p>
+
+    <script>
+        const DOMAIN = "{{ domain }}"; 
+    
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiKeyInput = document.getElementById('apiKey');
+            const archiveCheckbox = document.getElementById('archive');
+            const savedApiKey = Cookies.get('omnivoreApiKey');
+            const savedArchive = Cookies.get('omnivoreArchive');
+    
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+    
+            if (savedArchive === 'true') {
+                archiveCheckbox.checked = true;
+            }
+    
+            document.getElementById('settingsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSettings();
+            });
+        });
+    
+        function saveSettings() {
+            const apiKey = document.getElementById('apiKey').value;
+            const archive = document.getElementById('archive').checked;
+            const statusDiv = document.getElementById('status');
+    
+            Cookies.set('omnivoreApiKey', apiKey, { expires: 30 });
+            Cookies.set('omnivoreArchive', archive, { expires: 30 });
+    
+            statusDiv.textContent = 'Settings saved successfully!';
+        }
+    </script>
+</body>
+</html>
