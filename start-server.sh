@@ -1,2 +1,2 @@
 #!/bin/bash
-gunicorn --config gunicorn.conf.py wsgi:app
+gunicorn --worker-class eventlet -w 1 --config gunicorn.conf.py wsgi:app

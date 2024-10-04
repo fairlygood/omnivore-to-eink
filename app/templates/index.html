@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="black">
+    <title>Omnivore to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.1/js.cookie.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <style>
+        :root {
+            --bg: #FFEA9F;
+            --accent: black;
+            --accent-hover: #8a8888;
+            --accent-bg: white;
+            --accent-text: white;
+            --border: #ffbf00
+        }
+        textarea, select, input, progress {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: #ffffff;
+            border-width: 2px;
+        }
+        textarea, select, input, button, .button {
+            font-size: inherit;
+            border-radius: var(--standard-border-radius);
+            box-shadow: none;
+            max-width: 100%;
+            margin-bottom: .5rem;
+            padding: .5rem 1.1rem;
+            font-family: inherit;
+            display: inline-block;
+        }
+        textarea, select, button, .button {
+            font-size: inherit;
+            border-radius: var(--standard-border-radius);
+            box-shadow: none;
+            max-width: 100%;
+            margin-bottom: .5rem;
+            padding: .5rem 1.1rem;
+            font-family: inherit;
+            display: inline-block;
+            text-align: center;
+        }
+        input[type="checkbox"], input[type="radio"] {
+            vertical-align: middle;
+            width: min-content;
+            position: relative;
+            height: fit-content;
+            padding: .5rem;
+        }
+        .article-item {
+            display: flex;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+        }
+        body > header {
+            background-color: black;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            grid-column: 1/-1;
+            padding: 0 .5rem 2rem;
+        }
+        body > header > p {
+            margin-bottom: 0;
+            margin-top: 0;
+            color: white;
+        }
+        body > header > h1 {
+            margin-bottom: 0;
+            margin-top: 2rem;
+            color: white;
+        }
+        .intro {
+            margin-top: 0;
+            font-style: italic;
+        }
+        .formItem {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+        }
+        #sort {
+            width: 9rem;
+        }
+        .formItem > button:nth-child(3) {
+            min-width: 6.5rem;
+        }
+        #status {
+            padding-top: 1rem;
+        }
+        nav {
+            line-height: 2;
+            padding: 1rem 0 0 0;
+        }
+
+        .navContainer {
+            grid-gap: 7px;
+            grid-template-columns: repeat(3,1fr);
+            margin-bottom: 5px;
+            display: grid;
+        }
+
+        nav a, nav a:visited {
+            border-radius: var(--standard-border-radius);
+            color: white;
+            opacity: 1;
+            padding: 0.3rem 1.5rem;
+            text-decoration: none;
+            background-color: var(--accent);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        nav a:hover,
+        nav a.current,
+        nav a[aria-current="page"],
+        nav a[aria-current="true"] {
+            border-color: var(--accent);
+            color: white;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .hidden {
+            display: none;
+        }
+
+        #progressContainer {
+            margin-top: 1rem;
+        }
+        #progressBar {
+            width: 100%;
+            margin-bottom: 0rem;
+        }
+        #statusText {
+            margin-top: 0rem;
+            font-style: italic;
+            font-size: 0.7rem;
+        }
+        .status-icon {
+            margin-right: 0.5rem;
+        }
+        .status-message {
+            vertical-align: middle;
+        }
+        .mt0 {
+            margin-top: 0;
+        }
+        .mt1 {
+            margin-top: 1rem;
+        }
+        .mt2 {
+            margin-top: 1.5rem;
+        }
+        .mb1 {
+            margin-bottom: 1rem;
+        }
+        .mb2 {
+            margin-bottom: 1.5rem;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Omnivore to PDF</h1>
+        <p>A Fairly Good Web App</p>
+    </header>
+
+    <p class="notice">This application will fetch a bunch of articles from <a href="https://omnivore.app">Omnivore</a> and generate a PDF in a size suitable for large-format e-readers, such as the Kindle Scribe or Remarkable.</p>
+
+    <div class="navContainer">
+        <button id="recentLastBtn">Recent & Last</button>
+        <button id="customSelectionBtn">Custom Selection</button>
+        <a class="button" href="{{ url_for('main.settings') }}">Settings</a>
+    </div>
+
+    <div id="settingsWarning" class="warning notice hidden">
+        Enter your API key in <a href="{{ url_for('main.settings') }}">settings</a> to get started.
+    </div>
+
+    <div id="recentLastSection">
+        <form id="pdfForm">
+            <p class="intro mt2"><strong>Note:</strong> We'll only return a maximum of ten articles because generating the PDF can be resource intensive, especially if the documents are long or have lots of images. It also results in smaller file sizes (and less bandwidth).</p>
+            <p>Enter a label (optional) to return only articles with that label applied, and choose whether to return the newest or oldest articles.</p>
+            <div class="formItem">
+                <input type="text" placeholder="Label" id="tag" name="tag">
+                <select id="sort" name="sort">
+                    <option value="asc">Oldest First</option>
+                    <option value="dsc">Newest First</option>
+                </select> 
+                <button type="submit">Fetch!</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="customSelectionSection" class="hidden">
+        <input type="text" id="searchInput" class="mb2 mt2" placeholder="Filter...">
+        <div id="articleList" class="article-list mb2"></div>
+        <button id="generatePdf" disabled>Generate PDF (0 selected)</button>
+    </div>
+    
+    <div id="progressContainer" class="hidden">
+        <progress id="progressBar" max="100" value="0"></progress>
+        <p id="statusText"></p>
+    </div>
+
+    <footer>
+        <span><a href="{{ url_for('main.settings') }}">Settings</a> | <a href="https://github.com/fairlygood/omnivore-to-epub">Source</a></span>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/index.js') }}" data-domain="{{ domain }}"></script>
+</body>
+</html>

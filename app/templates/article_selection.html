@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="black">
+    <title>Omnivore to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.1/js.cookie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <style>
+        :root {
+            --bg: #FFEA9F;
+            --accent: black;
+            --accent-hover: #8a8888;
+            --accent-bg: white;
+            --accent-text: white;
+            --border: #ffbf00
+        }
+        textarea, select, input, progress {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: #ffffff;
+            border-width: 2px;
+        }
+        textarea, select, button, .button {
+            font-size: inherit;
+            border-radius: var(--standard-border-radius);
+            box-shadow: none;
+            max-width: 100%;
+            margin-bottom: .5rem;
+            padding: .5rem 1.1rem;
+            font-family: inherit;
+            display: inline-block;
+        }
+        input[type="checkbox"], input[type="radio"] {
+            vertical-align: middle;
+            width: min-content;
+            position: relative;
+            height: fit-content;
+        }
+        .article-item {
+            display: flex;
+            gap: 1rem;
+        }
+        body > header {
+            background-color: black;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            grid-column: 1/-1;
+            padding: 0 .5rem 2rem;
+        }
+        body > header > p {
+            margin-bottom: 0;
+            margin-top: 0;
+            color: white;
+        }
+        body > header > h1 {
+            margin-bottom: 0;
+            margin-top: 2rem;
+            color: white;
+        }
+        .navContainer {
+            grid-gap: 7px;
+            grid-template-columns: repeat(3,1fr);
+            margin-bottom: 5px;
+            display: grid;
+        }
+        nav {
+            line-height: 2;
+            padding: 1rem 0 0 0;
+        }
+        nav a, nav a:visited {
+            border-radius: var(--standard-border-radius);
+            color: white;
+            opacity: 1;
+            padding: 0.3rem 1.5rem;
+            text-decoration: none;
+            background-color: var(--accent);
+            text-align: center;
+            font-weight: bold;
+        }
+        button {
+            border-radius: var(--standard-border-radius);
+            color: white;
+            opacity: 1;
+            padding: 0.3rem 1.5rem;
+            text-decoration: none;
+            background-color: var(--accent);
+            text-align: center;
+            font-weight: bold;
+        }
+        nav a:hover,
+        nav a.current,
+        nav a[aria-current="page"],
+        nav a[aria-current="true"] {
+            border-color: var(--accent);
+            color: white;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .mt2 {
+            margin-top: 2rem;
+        }
+        .mb2 {
+            margin-bottom: 2rem;
+        }
+        .mb0 {
+            margin-bottom: 0rem;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        #status {
+            margin-top: 1rem;
+            font-weight: bold;
+        }
+        #progressContainer {
+            margin-top: 1rem;
+        }
+        #progressBar {
+            width: 100%;
+            margin-bottom: 0rem;
+        }
+        #statusText {
+            margin-top: 0rem;
+            font-style: italic;
+            font-size: 0.7rem;
+        }
+        .status-icon {
+            margin-right: 0.5rem;
+        }
+        .status-message {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Omnivore to PDF</h1>
+        <p>A Fairly Good Web App</p>
+    </header>
+    <nav>
+        <div class="navContainer">
+            <a href="{{ url_for('main.index') }}">Recent & Last</a>
+            <a href="{{ url_for('main.article_selection') }}">Custom Selection</a>
+            <a href="{{ url_for('main.settings') }}">Settings</a>
+        </div>
+    </nav>
+    <h1 class="mb0">Custom Selection</h1>
+    <p>Select up to 10 articles to include in your PDF.</p>
+    <input type="text" id="searchInput" placeholder="Filter...">
+    <div id="articleList" class="article-list mb2"></div>
+    <button id="generatePdf" disabled>Generate PDF (0 selected)</button>
+
+    <footer>
+        <span><a href="{{ url_for('main.settings') }}">Settings</a> | <a href="https://github.com/fairlygood/omnivore-to-epub">Source</a></span>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/article_selection.js') }}"></script>
+</body>
+</html>
