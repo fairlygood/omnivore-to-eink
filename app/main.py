@@ -18,15 +18,33 @@ logger.setLevel(logging.WARNING)
 # Set up rate limiting
 limiter = Limiter(get_remote_address, storage_uri="memory://")
 
+def log_pdf_articles(articles):
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
+    log_file = os.path.join(log_dir, "pdf_articles.log")
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"\nArticles converted on {current_date}:\n")
+        f.write("=" * 30 + "\n")
+        
+        for article in articles:
+            f.write(f"{article['title']}\n")
+            f.write(f"{article['url']}\n\n")
+
+
 @bp.route('/')
 def index():
-    return render_template('index.html', domain=current_app.config['DOMAIN'])
+    return render_template('index.html')
 
 @bp.route('/settings')
 def settings():
-    return render_template('settings.html', domain=current_app.config['DOMAIN'])
+    return render_template('settings.html')
 
 @bp.route('/fetch_articles', methods=['POST'])
+@limiter.limit("10 per minute") 
 def fetch_all_articles_route():
     api_key = request.json.get('api_key')
     tag = request.json.get('tag')
@@ -47,12 +65,13 @@ def fetch_all_articles_route():
     })
 
 @bp.route('/generate_pdf', methods=['POST'])
-@limiter.limit("1 per minute")
+@limiter.limit("20 per hour")
 def generate_pdf():
     try:
         api_key = request.json.get('api_key')
         article_slugs = request.json.get('article_slugs', [])
         archive = request.json.get('archive', False)
+        two_column_layout = request.json.get('two_column_layout', False)
 
         if not api_key:
             logger.warning("API key not provided")
@@ -68,13 +87,14 @@ def generate_pdf():
             logger.warning("No articles fetched. Check your API key or criteria.")
             return jsonify({"error": "No articles fetched. Check your API key or criteria."}), 404
 
+        log_pdf_articles(articles)
         current_date = datetime.now().strftime("%Y%m%d")
         unique_id = uuid.uuid4().hex[:8]
         pdf_filename = f"Omnivore_{current_date}_{unique_id}.pdf"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_pdf_path = os.path.join(temp_dir, 'temp_omnivore_articles.pdf')
-            pdf_path = create_pdf(articles, current_date, temp_pdf_path)
+            pdf_path = create_pdf(articles, current_date, temp_pdf_path, two_column_layout)
             
             if pdf_path and os.path.exists(pdf_path):
                 compressed_pdf_path = os.path.join(temp_dir, pdf_filename)

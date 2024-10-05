@@ -115,9 +115,71 @@ function updateGenerateButton() {
     button.disabled = selectedArticles.length === 0;
 }
 
+function fetchArticlesAndGeneratePDF() {
+    const apiKey = Cookies.get('omnivoreApiKey');
+    const archive = Cookies.get('omnivoreArchive') === 'true';
+    const twoColumnLayout = Cookies.get('omnivoreTwoColumnLayout') === 'true';
+    const tag = document.getElementById('tag').value;
+    const sort = document.getElementById('sort').value;
+
+    updateProgressBar(0, 'Fetching articles...');
+
+    // First, fetch articles
+    fetch('/fetch_articles', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            api_key: apiKey, 
+            tag: tag, 
+            sort: sort
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Now generate PDF with the fetched articles
+        return fetch('/generate_pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                api_key: apiKey,
+                archive: archive,
+                article_slugs: data.articles.map(article => article.slug),
+                two_column_layout: twoColumnLayout
+            }),
+        });
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        const filename = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
+        return response.blob().then(blob => ({ blob, filename }));
+    })
+    .then(({ blob, filename }) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        updateProgressBar(100, 'PDF generated successfully!');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        updateProgressBar(100, `Error: ${error.error || 'An unexpected error occurred. Is your API key correct?'}`);
+    });
+}
+
 function generatePdf() {
     const apiKey = Cookies.get('omnivoreApiKey');
     const archive = Cookies.get('omnivoreArchive') === 'true';
+    const twoColumnLayout = Cookies.get('omnivoreTwoColumnLayout') === 'true';
     if (!apiKey) {
         alert('Please set your API key in the settings.');
         return;
@@ -137,7 +199,8 @@ function generatePdf() {
         body: JSON.stringify({ 
             api_key: apiKey, 
             article_slugs: selectedArticles,
-            archive: archive
+            archive: archive,
+            two_column_layout: twoColumnLayout
         }),
     })
     .then(response => {
@@ -165,65 +228,6 @@ function generatePdf() {
     .finally(() => {
         generateButton.disabled = false;
         updateGenerateButton();
-    });
-}
-
-function fetchArticlesAndGeneratePDF() {
-    const apiKey = Cookies.get('omnivoreApiKey');
-    const archive = Cookies.get('omnivoreArchive') === 'true';
-    const tag = document.getElementById('tag').value;
-    const sort = document.getElementById('sort').value;
-
-    updateProgressBar(0, 'Fetching articles...');
-
-    // First, fetch articles
-    fetch('/fetch_articles', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-            api_key: apiKey, 
-            tag: tag, 
-            sort: sort
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Now generate PDF with the fetched articles
-        return fetch(`${DOMAIN}/generate_pdf`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                api_key: apiKey,
-                archive: archive,
-                article_slugs: data.articles.map(article => article.slug)
-            }),
-        });
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        const filename = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
-        return response.blob().then(blob => ({ blob, filename }));
-    })
-    .then(({ blob, filename }) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        updateProgressBar(100, 'PDF generated successfully!');
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        updateProgressBar(100, `Error: ${error.error || 'An unexpected error occurred. Is your API key correct?'}`);
     });
 }
 

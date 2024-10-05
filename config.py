@@ -2,9 +2,6 @@ import os
 import logging
 
 class Config:
-    # The domain where the application is hosted
-    DOMAIN = "https://DOMAIN.COM"
-    
     # API endpoint
     API_ENDPOINT = "https://api-prod.omnivore.app/api/graphql"
     
@@ -19,10 +16,6 @@ class Config:
     
     # Static files directory
     STATIC_DIR = os.path.abspath(os.path.join("app", "static"))
-
-    # Flask-Limiter configurations
-    RATELIMIT_DEFAULT = "200 per day;50 per hour"
-    RATELIMIT_STORAGE_URI = "memory://"
     
     # Other configurations...
     DEBUG = False

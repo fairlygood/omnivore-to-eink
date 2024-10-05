@@ -126,7 +126,20 @@ def process_article_content(article, article_index, total_articles):
         logger.error(f"Error processing article {article['title']}: {e}")
         return None
 
-def create_pdf(articles, current_date, pdf_path):
+import logging
+import os
+import io
+from weasyprint import HTML, urls
+from weasyprint.text.fonts import FontConfiguration
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+from flask import current_app
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from app import socketio
+
+logger = logging.getLogger(__name__)
+
+def create_pdf(articles, current_date, pdf_path, two_column_layout=False):
     socketio.emit('pdf_progress', {'progress': 0, 'status': 'Starting PDF generation'})
     
     socketio.emit('pdf_progress', {'progress': 5, 'status': 'Loading fonts and cover'})
@@ -146,6 +159,24 @@ def create_pdf(articles, current_date, pdf_path):
     
     page_width_px = 810
     page_height_px = 1080
+
+    column_css = """
+    .article-content {
+        column-count: 2;
+        column-gap: 20px;
+        text-align: justify;
+    }
+    .article-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 10px auto;
+        page-break-inside: avoid;
+    }
+    .article-header {
+        column-span: all;
+    }
+    """ if two_column_layout else ""
 
     html_content = f"""
     <html>
@@ -171,15 +202,15 @@ def create_pdf(articles, current_date, pdf_path):
             }}
             @page {{
                 size: {page_width_px}px {page_height_px}px;
-                margin: 50px 50px;
+                margin: {'25px 25px' if two_column_layout else '50px 50px'};
             }}
             @page :first {{
                 margin: 0;
             }}
             body {{ 
                 font-family: 'Lexend', sans-serif; 
-                font-size: 15px; 
-                line-height: 1.4; 
+                font-size: {'13.5px' if two_column_layout else '15px'}; 
+                line-height: 1.5; 
                 margin: 0;
                 padding: 0;
             }}
@@ -200,10 +231,10 @@ def create_pdf(articles, current_date, pdf_path):
             }}
             h1 {{ 
                 font-family: 'Bookerly', serif; 
-                font-size: 26px; 
+                font-size: {'24px' if two_column_layout else '26px'}; 
                 font-weight: bold; 
-                margin-top: 30px;
-                margin-bottom: 20px;
+                margin-top: 20px;
+                margin-bottom: {'10px' if two_column_layout else '20px'};
                 page-break-before: always;
             }}
             h2 {{ 
@@ -212,6 +243,10 @@ def create_pdf(articles, current_date, pdf_path):
                 font-weight: bold; 
                 margin-top: 25px;
                 margin-bottom: 15px;
+            }}
+            .article-header {{
+                border-bottom: 2px solid black;
+                margin-bottom: 1.5rem;
             }}
             .metadata {{ 
                 font-family: 'Lexend', sans-serif;
@@ -273,6 +308,7 @@ def create_pdf(articles, current_date, pdf_path):
             .toc li {{
                 margin-bottom: 10px;
             }}
+            {column_css}
         </style>
     </head>
     <body>
@@ -321,10 +357,15 @@ def create_pdf(articles, current_date, pdf_path):
     # Add processed article content
     for index, article in enumerate(processed_articles, start=1):
         html_content += f"""
-        <h1 id="article-{index}">{article['title']}</h1>
-        <p class="metadata">{article['author'] or 'Unknown'} | {urlparse(article['url']).netloc}</p>
-        <hr>
-        {article['processed_content']}
+        <div class="article">
+            <div class="article-header">
+                <h1 class="article-title" id="article-{index}">{article['title']}</h1>
+                <p class="metadata">{article['author'] or 'Unknown'} | {urlparse(article['url']).netloc}</p>
+            </div>
+            <div class="article-content">
+                {article['processed_content']}
+            </div>
+        </div>
         """
 
     html_content += "</body></html>"
