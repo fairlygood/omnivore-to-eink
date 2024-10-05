@@ -296,6 +296,12 @@ def create_pdf(articles, current_date, pdf_path, two_column_layout=False):
                 border-bottom: 1px solid black;
                 padding-bottom: 2px;
             }}
+            .toc {{
+                padding: {'1.5rem' if two_column_layout else '0rem'};
+            }}
+            .toc h1 {{
+                font-size: 28px;
+            }}
             .toc a {{
                 text-decoration: none;
                 border-bottom: none;
@@ -304,6 +310,7 @@ def create_pdf(articles, current_date, pdf_path, two_column_layout=False):
             .toc ul {{
                 list-style-type: none;
                 padding-left: 0;
+                font-size: 15px;
             }}
             .toc li {{
                 margin-bottom: 10px;

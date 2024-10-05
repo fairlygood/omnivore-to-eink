@@ -65,7 +65,7 @@ def fetch_all_articles_route():
     })
 
 @bp.route('/generate_pdf', methods=['POST'])
-@limiter.limit("20 per hour")
+@limiter.limit("10 per hour")
 def generate_pdf():
     try:
         api_key = request.json.get('api_key')

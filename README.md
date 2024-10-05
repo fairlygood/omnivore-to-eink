@@ -7,6 +7,7 @@ Features:
 - Output is sized approriately for most large e-ink devices
 - Uses Ghostscript to compress the output, reducing device storage requirments and bandwidth
 - Navigable table of contents
+- Optional two-column view
 - Images included
 - Download most recent or oldest articles, or build a custom document
 - Option to mark as read on Omnivore
