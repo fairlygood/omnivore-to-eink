@@ -19,7 +19,7 @@ A hosted version is available [here](https://omnivore-to-pdf.fairlygood.net).
 ## Installation
 
 1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Edit config.py with your URL
-4. Run the server: `python start-server.sh`
+2. Create a virtual environment
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the server: `./start-server.sh`
 
