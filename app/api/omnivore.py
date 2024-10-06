@@ -7,7 +7,16 @@ logger = logging.getLogger(__name__)
 def get_api_endpoint():
     return current_app.config['API_ENDPOINT']
 
-def fetch_articles(api_key, tag=None, sort="asc", cursor=None):
+import requests
+import logging
+from flask import current_app
+
+logger = logging.getLogger(__name__)
+
+def get_api_endpoint():
+    return current_app.config['API_ENDPOINT']
+
+def fetch_articles(api_key, tag=None, sort="asc", cursor=None, socketio=None, emit_progress=False):
     headers = {
         "Authorization": api_key,
         "Content-Type": "application/json",
@@ -64,10 +73,17 @@ def fetch_articles(api_key, tag=None, sort="asc", cursor=None):
     
     all_articles = []
     has_next_page = True
+    total_fetched = 0
+    
+    if emit_progress and socketio:
+        socketio.emit('pdf_progress', {'progress': 5, 'status': 'Starting to fetch articles'})
     
     while has_next_page:
         try:
             logger.info(f"Sending request to the Omnivore API")
+            if emit_progress and socketio:
+                socketio.emit('pdf_progress', {'progress': 10 + (total_fetched * 10 // 100), 'status': f'Fetching articles... ({total_fetched} fetched)'})
+            
             response = requests.post(get_api_endpoint(), json=graphql_query, headers=headers)
             logger.info(f"Received response with status code: {response.status_code}")
             
@@ -76,20 +92,27 @@ def fetch_articles(api_key, tag=None, sort="asc", cursor=None):
             
             if "errors" in data:
                 logger.error(f"GraphQL errors: {data['errors']}")
+                if emit_progress and socketio:
+                    socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error fetching articles'})
                 break
             
             search_result = data["data"]["search"]
             
             if isinstance(search_result, dict) and "errorCodes" in search_result:
                 logger.error(f"Search error codes: {search_result['errorCodes']}")
+                if emit_progress and socketio:
+                    socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error in search results'})
                 break
             
             if not isinstance(search_result, dict) or "edges" not in search_result:
                 logger.error(f"Unexpected search result structure: {search_result}")
+                if emit_progress and socketio:
+                    socketio.emit('pdf_progress', {'progress': 100, 'status': 'Unexpected search result structure'})
                 break
             
             articles = [edge['node'] for edge in search_result['edges']]
             all_articles.extend(articles)
+            total_fetched += len(articles)
             
             has_next_page = search_result['pageInfo']['hasNextPage']
             cursor = search_result['pageInfo']['endCursor']
@@ -97,9 +120,13 @@ def fetch_articles(api_key, tag=None, sort="asc", cursor=None):
             
         except Exception as e:
             logger.error(f"Error fetching articles: {str(e)}")
+            if emit_progress and socketio:
+                socketio.emit('pdf_progress', {'progress': 100, 'status': f'Error fetching articles: {str(e)}'})
             break
     
     logger.info(f"Successfully fetched {len(all_articles)} articles")
+    if emit_progress and socketio:
+        socketio.emit('pdf_progress', {'progress': 20, 'status': f'Fetched {len(all_articles)} articles'})
     return all_articles, None, False
 
 def fetch_articles_by_ids(api_key, article_slugs):

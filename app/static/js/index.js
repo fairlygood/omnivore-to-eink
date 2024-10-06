@@ -65,7 +65,8 @@ function fetchArticles() {
         },
         body: JSON.stringify({ 
             api_key: apiKey,
-            page_type: 'article_selection'
+            page_type: 'article_selection',
+            emit_progress: false  // Don't emit progress for initial fetch
         }),
     })
     .then(response => response.json())
@@ -122,7 +123,7 @@ function fetchArticlesAndGeneratePDF() {
     const tag = document.getElementById('tag').value;
     const sort = document.getElementById('sort').value;
 
-    updateProgressBar(0, 'Fetching articles...');
+    updateProgressBar(0, 'Initiating article fetch...');
 
     // First, fetch articles
     fetch('/fetch_articles', {
@@ -138,6 +139,7 @@ function fetchArticlesAndGeneratePDF() {
     })
     .then(response => response.json())
     .then(data => {
+        updateProgressBar(25, 'Articles fetched. Initiating PDF generation...');
         // Now generate PDF with the fetched articles
         return fetch('/generate_pdf', {
             method: 'POST',
@@ -168,7 +170,7 @@ function fetchArticlesAndGeneratePDF() {
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        updateProgressBar(100, 'PDF generated successfully!');
+        updateProgressBar(100, 'PDF generated and downloaded successfully!');
     })
     .catch(error => {
         console.error('Error:', error);
@@ -200,7 +202,8 @@ function generatePdf() {
             api_key: apiKey, 
             article_slugs: selectedArticles,
             archive: archive,
-            two_column_layout: twoColumnLayout
+            two_column_layout: twoColumnLayout,
+            emit_progress: true 
         }),
     })
     .then(response => {
