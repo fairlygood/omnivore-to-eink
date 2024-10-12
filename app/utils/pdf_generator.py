@@ -202,7 +202,7 @@ def create_pdf(articles, current_date, pdf_path, two_column_layout=False):
             }}
             @page {{
                 size: {page_width_px}px {page_height_px}px;
-                margin: {'25px 25px' if two_column_layout else '50px 50px'};
+                margin: {'50px 25px' if two_column_layout else '50px 50px'};
             }}
             @page :first {{
                 margin: 0;
