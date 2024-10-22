@@ -1,20 +1,20 @@
-# Omnivore to PDF
+# Omnivore to E-Ink
 
-This is a simple flask application that connects to the Omnivore API, retrieves a bunch of your articles and converts them to a PDF suitable for reading on large format eReaders, like the Remarkable or Kindle Scribe. It's mainly useful for devices that can't use the official Omnivore app, or if you want to mark-up the documents.
+This is a simple flask application that connects to the Omnivore API, retrieves a bunch of your articles and converts them to a PDF suitable for reading on large format eReaders, or an ePub for others.
 
 Features:
 
-- Output is sized approriately for most large e-ink devices
-- Uses Ghostscript to compress the output, reducing device storage requirments and bandwidth
+- PDF output is sized approriately for most large e-ink devices
+- Uses Ghostscript to compress PDF output, reducing device storage requirments and bandwidth
 - Navigable table of contents
-- Optional two-column view
+- Optional two-column view (PDF only)
 - Images included
 - Download most recent or oldest articles, or build a custom document
 - Option to mark as read on Omnivore
 
 It should be trivial to host this on your own hardware.
 
-A hosted version is available [here](https://omnivore-to-pdf.fairlygood.net).
+A hosted version is available [here](https://omnivore-to-eink.fairlygood.net).
 
 ## Installation
 
