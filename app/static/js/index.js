@@ -19,10 +19,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('customSelectionBtn').addEventListener('click', showCustomSelection);
     document.getElementById('pdfForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        fetchArticlesAndGeneratePDF();
+        fetchArticlesAndGenerateDocument();
     });
-    document.getElementById('generatePdf').addEventListener('click', generatePdf);
+    document.getElementById('generateDocument').addEventListener('click', generateDocument);
     document.getElementById('searchInput').addEventListener('input', handleSearch);
+
+    // Add event listeners for radio buttons
+    document.querySelectorAll('input[name="outputFormat"]').forEach(radio => {
+        radio.addEventListener('change', updateGenerateButton);
+    });
 
     // Initialize Socket.IO if it's available
     if (typeof io !== 'undefined') {
@@ -30,12 +35,14 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.on('connect', function() {
             console.log('Connected to server');
         });
-        socket.on('pdf_progress', function(data) {
+        socket.on('document_progress', function(data) {
             updateProgressBar(data.progress, data.status);
         });
     } else {
         console.warn('Socket.IO is not available. Real-time updates will not work.');
     }
+
+    updateGenerateButton();
 });
 
 function showRecentLast() {
@@ -111,17 +118,19 @@ function toggleArticle(slug, isSelected) {
 }
 
 function updateGenerateButton() {
-    const button = document.getElementById('generatePdf');
-    button.textContent = `Generate PDF (${selectedArticles.length} selected)`;
+    const button = document.getElementById('generateDocument');
+    const outputFormat = document.querySelector('#customSelectionSection input[name="outputFormat"]:checked').value;
+    button.textContent = `Generate ${outputFormat.toUpperCase()} (${selectedArticles.length} selected)`;
     button.disabled = selectedArticles.length === 0;
 }
 
-function fetchArticlesAndGeneratePDF() {
+function fetchArticlesAndGenerateDocument() {
     const apiKey = Cookies.get('omnivoreApiKey');
     const archive = Cookies.get('omnivoreArchive') === 'true';
     const twoColumnLayout = Cookies.get('omnivoreTwoColumnLayout') === 'true';
     const tag = document.getElementById('tag').value;
     const sort = document.getElementById('sort').value;
+    const outputFormat = document.querySelector('input[name="outputFormat"]:checked').value;
 
     updateProgressBar(0, 'Initiating article fetch...');
 
@@ -139,9 +148,9 @@ function fetchArticlesAndGeneratePDF() {
     })
     .then(response => response.json())
     .then(data => {
-        updateProgressBar(25, 'Articles fetched. Initiating PDF generation...');
-        // Now generate PDF with the fetched articles
-        return fetch('/generate_pdf', {
+        updateProgressBar(25, `Articles fetched. Initiating ${outputFormat.toUpperCase()} generation...`);
+        // Now generate document with the fetched articles
+        return fetch('/generate_document', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -150,7 +159,8 @@ function fetchArticlesAndGeneratePDF() {
                 api_key: apiKey,
                 archive: archive,
                 article_slugs: data.articles.map(article => article.slug),
-                two_column_layout: twoColumnLayout
+                two_column_layout: twoColumnLayout,
+                output_format: outputFormat
             }),
         });
     })
@@ -170,7 +180,7 @@ function fetchArticlesAndGeneratePDF() {
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        updateProgressBar(100, 'PDF generated and downloaded successfully!');
+        updateProgressBar(100, `${outputFormat.toUpperCase()} generated and downloaded successfully!`);
     })
     .catch(error => {
         console.error('Error:', error);
@@ -178,22 +188,26 @@ function fetchArticlesAndGeneratePDF() {
     });
 }
 
-function generatePdf() {
+function generateDocument() {
     const apiKey = Cookies.get('omnivoreApiKey');
     const archive = Cookies.get('omnivoreArchive') === 'true';
     const twoColumnLayout = Cookies.get('omnivoreTwoColumnLayout') === 'true';
+    
+    // Get the selected output format from the custom selection section
+    const outputFormat = document.querySelector('#customSelectionSection input[name="outputFormat"]:checked').value;
+    
     if (!apiKey) {
         alert('Please set your API key in the settings.');
         return;
     }
 
-    const generateButton = document.getElementById('generatePdf');
+    const generateButton = document.getElementById('generateDocument');
     generateButton.disabled = true;
     generateButton.textContent = 'Generating...';
 
     updateProgressBar(0, 'Waiting for server...');
 
-    fetch('/generate_pdf', {
+    fetch('/generate_document', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -202,7 +216,8 @@ function generatePdf() {
             api_key: apiKey, 
             article_slugs: selectedArticles,
             archive: archive,
-            two_column_layout: twoColumnLayout,
+            two_column_layout: outputFormat === 'pdf' ? twoColumnLayout : false,
+            output_format: outputFormat,
             emit_progress: true 
         }),
     })
@@ -222,11 +237,11 @@ function generatePdf() {
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        updateProgressBar(100, 'PDF generated and downloaded successfully!');
+        updateProgressBar(100, `${outputFormat.toUpperCase()} generated and downloaded successfully!`);
     })
     .catch(error => {
         console.error('Error:', error);
-        updateProgressBar(100, `Error generating PDF: ${error.error || 'An unexpected error occurred'}`);
+        updateProgressBar(100, `Error generating ${outputFormat.toUpperCase()}: ${error.error || 'An unexpected error occurred'}`);
     })
     .finally(() => {
         generateButton.disabled = false;

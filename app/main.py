@@ -9,6 +9,8 @@ import tempfile
 from datetime import datetime
 import uuid
 from app import socketio
+from app.utils.epub_generator import create_epub
+
 
 bp = Blueprint('main', __name__)
 
@@ -66,60 +68,73 @@ def fetch_all_articles_route():
         "articles": articles
     })
 
-@bp.route('/generate_pdf', methods=['POST'])
+@bp.route('/generate_document', methods=['POST'])
 @limiter.limit("10 per hour")
-def generate_pdf():
+def generate_document():
     try:
-        socketio.emit('pdf_progress', {'progress': 5, 'status': 'Initializing PDF generation process'})
+        socketio.emit('document_progress', {'progress': 5, 'status': 'Initializing document generation process'})
         
         api_key = request.json.get('api_key')
         article_slugs = request.json.get('article_slugs', [])
         archive = request.json.get('archive', False)
         two_column_layout = request.json.get('two_column_layout', False)
+        output_format = request.json.get('output_format', 'pdf')
 
         if not api_key:
             logger.warning("API key not provided")
-            socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error: API key is required'})
+            socketio.emit('document_progress', {'progress': 100, 'status': 'Error: API key is required'})
             return jsonify({"error": "API key is required"}), 400
 
         if len(article_slugs) > 10:
             logger.warning("Too many articles selected")
-            socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error: Too many articles selected'})
+            socketio.emit('document_progress', {'progress': 100, 'status': 'Error: Too many articles selected'})
             return jsonify({"error": "You can only select up to 10 articles"}), 400
 
-        socketio.emit('pdf_progress', {'progress': 10, 'status': 'Fetching articles'})
+        socketio.emit('document_progress', {'progress': 10, 'status': 'Fetching articles'})
         articles = fetch_articles_by_ids(api_key, article_slugs)
 
         if not articles:
             logger.warning("No articles fetched. Check your API key or criteria.")
-            socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error: No articles fetched'})
+            socketio.emit('document_progress', {'progress': 100, 'status': 'Error: No articles fetched'})
             return jsonify({"error": "No articles fetched. Check your API key or criteria."}), 404
 
-        socketio.emit('pdf_progress', {'progress': 20, 'status': 'Articles fetched successfully'})
+        socketio.emit('document_progress', {'progress': 20, 'status': 'Articles fetched successfully'})
         
         log_pdf_articles(articles)
         current_date = datetime.now().strftime("%Y%m%d")
         unique_id = uuid.uuid4().hex[:8]
-        pdf_filename = f"Omnivore_{current_date}_{unique_id}.pdf"
+        
+        if output_format == 'epub':
+            document_filename = f"Omnivore_{current_date}_{unique_id}.epub"
+        else:
+            document_filename = f"Omnivore_{current_date}_{unique_id}.pdf"
 
-        socketio.emit('pdf_progress', {'progress': 30, 'status': 'Starting PDF creation'})
+        socketio.emit('document_progress', {'progress': 30, 'status': f'Starting {output_format.upper()} creation'})
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            temp_pdf_path = os.path.join(temp_dir, 'temp_omnivore_articles.pdf')
-            pdf_path = create_pdf(articles, current_date, temp_pdf_path, two_column_layout)
+            temp_document_path = os.path.join(temp_dir, f'temp_omnivore_articles.{output_format}')
             
-            if pdf_path and os.path.exists(pdf_path):
-                socketio.emit('pdf_progress', {'progress': 80, 'status': 'PDF created, starting compression'})
-                compressed_pdf_path = os.path.join(temp_dir, pdf_filename)
-                final_pdf_path = compress_pdf(pdf_path, compressed_pdf_path)
+            if output_format == 'epub':
+                document_path = create_epub(articles, current_date, temp_document_path)
+            else:
+                document_path = create_pdf(articles, current_date, temp_document_path, two_column_layout)
+            
+            if document_path and os.path.exists(document_path):
+                socketio.emit('document_progress', {'progress': 80, 'status': f'{output_format.upper()} created'})
 
-                if os.path.exists(final_pdf_path):
-                    logger.info(f"Sending file: {final_pdf_path}")
-                    socketio.emit('pdf_progress', {'progress': 90, 'status': 'PDF compressed, preparing to send'})
+                if output_format == 'pdf':
+                    compressed_pdf_path = os.path.join(temp_dir, document_filename)
+                    final_document_path = compress_pdf(document_path, compressed_pdf_path)
+                else:
+                    final_document_path = document_path
+
+                if os.path.exists(final_document_path):
+                    logger.info(f"Sending file: {final_document_path}")
+                    socketio.emit('document_progress', {'progress': 90, 'status': f'{output_format.upper()} prepared, ready to send'})
                     
                     # Archive articles if requested
                     if archive:
-                        socketio.emit('pdf_progress', {'progress': 95, 'status': 'Archiving articles'})
+                        socketio.emit('document_progress', {'progress': 95, 'status': 'Archiving articles'})
                         for article in articles:
                             archive_result = archive_article(api_key, article['id'])
                             if archive_result:
@@ -127,18 +142,19 @@ def generate_pdf():
                             else:
                                 logger.warning(f"Failed to archive article: {article['id']}")
                     
-                    socketio.emit('pdf_progress', {'progress': 100, 'status': 'PDF ready for download'})
-                    return send_file(final_pdf_path, as_attachment=True, download_name=pdf_filename, mimetype='application/pdf')
+                    socketio.emit('document_progress', {'progress': 100, 'status': f'{output_format.upper()} ready for download'})
+                    return send_file(final_document_path, as_attachment=True, download_name=document_filename, 
+                                     mimetype='application/epub+zip' if output_format == 'epub' else 'application/pdf')
                 else:
-                    logger.error(f"Compressed PDF not found at: {final_pdf_path}")
-                    socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error: Compressed PDF not found'})
-                    return jsonify({"error": "Compressed PDF not found"}), 500
+                    logger.error(f"Final document not found at: {final_document_path}")
+                    socketio.emit('document_progress', {'progress': 100, 'status': f'Error: Final {output_format.upper()} not found'})
+                    return jsonify({"error": f"Final {output_format.upper()} not found"}), 500
             else:
-                logger.error(f"Original PDF not found at: {pdf_path}")
-                socketio.emit('pdf_progress', {'progress': 100, 'status': 'Error: Failed to create PDF'})
-                return jsonify({"error": "Failed to create PDF"}), 500
+                logger.error(f"Original document not found at: {document_path}")
+                socketio.emit('document_progress', {'progress': 100, 'status': f'Error: Failed to create {output_format.upper()}'})
+                return jsonify({"error": f"Failed to create {output_format.upper()}"}), 500
 
     except Exception as e:
         logger.exception(f"Unexpected error: {e}")
-        socketio.emit('pdf_progress', {'progress': 100, 'status': f'Error: {str(e)}'})
+        socketio.emit('document_progress', {'progress': 100, 'status': f'Error: {str(e)}'})
         return jsonify({"error": str(e)}), 500

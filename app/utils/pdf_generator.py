@@ -47,7 +47,7 @@ def is_valid_image_url(url):
     except ValueError:
         return False
 
-def process_content(content):
+def process_content(content, for_epub=False):
     soup = BeautifulSoup(content, 'html.parser')
     
     for img in soup.find_all('img'):
@@ -56,6 +56,37 @@ def process_content(content):
             logger.warning(f"Removing invalid image URL: {src}")
             img.decompose()
             continue
+
+        if for_epub:
+            try:
+                response = requests.get(src)
+                if response.status_code == 200:
+                    # Generate a unique filename for the image
+                    img_filename = f"image_{hash(src)}.jpg"
+                    
+                    # Save the image data
+                    img_data = response.content
+                    
+                    # Replace the src with the new filename
+                    img['src'] = img_filename
+                    
+                    # Store the image data to be added to the EPUB later
+                    if not hasattr(process_content, 'epub_images'):
+                        process_content.epub_images = []
+                    process_content.epub_images.append((img_filename, img_data))
+                else:
+                    logger.warning(f"Failed to fetch image: {src}")
+                    img.decompose()
+            except Exception as e:
+                logger.error(f"Error processing image {src}: {str(e)}")
+                img.decompose()
+        else:
+            # Existing image processing for PDF
+            optimized_image, mime_type = optimize_image(src)
+            if optimized_image:
+                img['src'] = f"data:{mime_type};base64,{base64.b64encode(optimized_image).decode('utf-8')}"
+            else:
+                img.decompose()
 
     for figure in soup.find_all('figure'):
         if figure.has_attr('class'):
@@ -125,19 +156,6 @@ def process_article_content(article, article_index, total_articles):
     except Exception as e:
         logger.error(f"Error processing article {article['title']}: {e}")
         return None
-
-import logging
-import os
-import io
-from weasyprint import HTML, urls
-from weasyprint.text.fonts import FontConfiguration
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
-from flask import current_app
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from app import socketio
-
-logger = logging.getLogger(__name__)
 
 def create_pdf(articles, current_date, pdf_path, two_column_layout=False):
     socketio.emit('pdf_progress', {'progress': 0, 'status': 'Starting PDF generation'})

@@ -79,17 +79,7 @@
             margin-top: 0;
             font-style: italic;
         }
-        .formItem {
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-        }
-        #sort {
-            width: 9rem;
-        }
-        .formItem > button:nth-child(3) {
-            min-width: 6.5rem;
-        }
+
         #status {
             padding-top: 1rem;
         }
@@ -162,16 +152,29 @@
         .mb2 {
             margin-bottom: 1.5rem;
         }
+        .formRow2 {
+            display: flex;
+            gap: 1rem;
+        }
+        #sort {
+            flex: 2;
+            text-align: unset;
+        }
+        .typeSelect {
+            display: flex;
+            align-items: center;
+        }
+
 
     </style>
 </head>
 <body>
     <header>
-        <h1>Omnivore to PDF</h1>
+        <h1>Omnivore to E-Ink</h1>
         <p>A Fairly Good Web App</p>
     </header>
 
-    <p class="notice">This application will fetch a bunch of articles from <a href="https://omnivore.app">Omnivore</a> and generate a PDF in a size suitable for large-format e-readers, such as the Kindle Scribe or Remarkable.</p>
+    <p class="notice">This application will fetch a bunch of articles from <a href="https://omnivore.app">Omnivore</a> and generate a nicely formatted PDF suitable for large-format e-readers, or an EPUB file for other devices. </p>
 
     <div class="navContainer">
         <button id="recentLastBtn">Recent & Last</button>
@@ -185,15 +188,25 @@
 
     <div id="recentLastSection">
         <form id="pdfForm">
-            <p class="intro mt2"><strong>Note:</strong> We'll only return a maximum of ten articles because generating the PDF can be resource intensive, especially if the documents are long or have lots of images. It also results in smaller file sizes (and less bandwidth).</p>
+            <p class="intro mt2"><strong>Note:</strong>Generating the files can be resource intensive, so we'll only return a maximum of 10 articles. This also keeps file sizes to a minimum.</p>
             <p>Enter a label (optional) to return only articles with that label applied, and choose whether to return the newest or oldest articles.</p>
             <div class="formItem">
-                <input type="text" placeholder="Label" id="tag" name="tag">
-                <select id="sort" name="sort">
-                    <option value="asc">Oldest First</option>
-                    <option value="dsc">Newest First</option>
-                </select> 
-                <button type="submit">Fetch!</button>
+                <input type="text" placeholder="Label (optional)" id="tag" name="tag">
+                <div class="formRow2">
+                    <select id="sort" name="sort">
+                        <option value="asc">Oldest First</option>
+                        <option value="dsc">Newest First</option>
+                    </select> 
+                    <div class="formItem typeSelect">
+                        <label>
+                            <input type="radio" name="outputFormat" value="pdf" checked> PDF
+                        </label>
+                        <label>
+                            <input type="radio" name="outputFormat" value="epub"> EPUB
+                        </label>
+                    </div>
+                    <button type="submit">Fetch!</button>
+                </div>
             </div>
         </form>
     </div>
@@ -201,7 +214,18 @@
     <div id="customSelectionSection" class="hidden">
         <input type="text" id="searchInput" class="mb2 mt2" placeholder="Filter...">
         <div id="articleList" class="article-list mb2"></div>
-        <button id="generatePdf" disabled>Generate PDF (0 selected)</button>
+        <div class="formRow2">
+            <div class="formItem typeSelect">
+                <label>
+                    <input type="radio" name="outputFormat" value="pdf" checked> PDF
+                </label>
+                <label>
+                    <input type="radio" name="outputFormat" value="epub"> EPUB
+                </label>
+            </div>
+            <button id="generateDocument" disabled>Generate (0 selected)</button>
+        </div>
+
     </div>
     
     <div id="progressContainer" class="hidden">
