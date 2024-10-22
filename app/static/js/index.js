@@ -3,6 +3,10 @@ let allArticles = [];
 let selectedArticles = [];
 let socket;
 
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const apiKey = Cookies.get('omnivoreApiKey');
     const settingsWarning = document.getElementById('settingsWarning');
@@ -31,7 +35,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Socket.IO if it's available
     if (typeof io !== 'undefined') {
-        socket = io();
+        socket = io({
+            auth: {
+                csrf_token: getCsrfToken()
+            }
+        });
         socket.on('connect', function() {
             console.log('Connected to server');
         });
@@ -69,11 +77,13 @@ function fetchArticles() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
         },
+        credentials: 'same-origin',  
         body: JSON.stringify({ 
             api_key: apiKey,
             page_type: 'article_selection',
-            emit_progress: false  // Don't emit progress for initial fetch
+            emit_progress: false
         }),
     })
     .then(response => response.json())
@@ -139,7 +149,9 @@ function fetchArticlesAndGenerateDocument() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ 
             api_key: apiKey, 
             tag: tag, 
@@ -154,7 +166,9 @@ function fetchArticlesAndGenerateDocument() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 api_key: apiKey,
                 archive: archive,
@@ -211,7 +225,9 @@ function generateDocument() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ 
             api_key: apiKey, 
             article_slugs: selectedArticles,

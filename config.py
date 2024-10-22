@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import timedelta
 
 class Config:
     # API endpoint
@@ -20,6 +21,12 @@ class Config:
     # Other configurations...
     DEBUG = False
     TESTING = False
+
+    # CSRF Settings
+    SECRET_KEY = 'you-should-change-this-in-production'
+    CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = timedelta(hours=1).total_seconds()
+    WTF_CSRF_SSL_STRICT = True 
 
 class DevelopmentConfig(Config):
     DEBUG = True

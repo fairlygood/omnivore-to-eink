@@ -10,6 +10,7 @@ from datetime import datetime
 import uuid
 from app import socketio
 from app.utils.epub_generator import create_epub
+from flask_wtf.csrf import CSRFError
 
 
 bp = Blueprint('main', __name__)
@@ -37,6 +38,13 @@ def log_pdf_articles(articles):
             f.write(f"{article['title']}\n")
             f.write(f"{article['url']}\n\n")
 
+
+@bp.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return jsonify({
+        'error': 'CSRF token missing or invalid',
+        'message': 'The form submission failed security verification.'
+    }), 400
 
 @bp.route('/')
 def index():
