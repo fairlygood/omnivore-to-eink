@@ -8,12 +8,18 @@ function getCsrfToken() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const apiKey = Cookies.get('omnivoreApiKey');
+    const apiKey = Cookies.get('readeckApiKey');
+    const readeckUrl = Cookies.get('readeckUrl');
     const settingsWarning = document.getElementById('settingsWarning');
     const recentLastSection = document.getElementById('recentLastSection');
     const customSelectionSection = document.getElementById('customSelectionSection');
 
-    if (!apiKey) {
+
+    document.getElementById('settingsBtn').addEventListener('click', function () {
+        window.location.href = '/settings';
+    });
+
+    if (!apiKey || !readeckUrl) {
         settingsWarning.style.display = 'block';
         recentLastSection.style.display = 'none';
         customSelectionSection.style.display = 'none';
@@ -28,12 +34,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('generateDocument').addEventListener('click', generateDocument);
     document.getElementById('searchInput').addEventListener('input', handleSearch);
 
-    // Add event listeners for radio buttons
-    document.querySelectorAll('input[name="outputFormat"]').forEach(radio => {
-        radio.addEventListener('change', updateGenerateButton);
-    });
-
-    // Initialize Socket.IO if it's available
     if (typeof io !== 'undefined') {
         socket = io({
             auth: {
@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function showRecentLast() {
     document.getElementById('recentLastSection').classList.remove('hidden');
     document.getElementById('customSelectionSection').classList.add('hidden');
+    fetchArticles();
 }
 
 function showCustomSelection() {
@@ -67,9 +68,11 @@ function showCustomSelection() {
 }
 
 function fetchArticles() {
-    const apiKey = Cookies.get('omnivoreApiKey');
-    if (!apiKey) {
-        alert('Please set your API key in the settings.');
+    const apiKey = Cookies.get('readeckApiKey');
+    const readeckUrl = Cookies.get('readeckUrl');
+
+    if (!apiKey || !readeckUrl) {
+        alert('Please set your API key and Readeck URL in the settings.');
         return;
     }
 
@@ -79,9 +82,10 @@ function fetchArticles() {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken(),
         },
-        credentials: 'same-origin',  
-        body: JSON.stringify({ 
+        credentials: 'same-origin',
+        body: JSON.stringify({
             api_key: apiKey,
+            readeck_url: readeckUrl,
             page_type: 'article_selection',
             emit_progress: false
         }),
@@ -101,25 +105,25 @@ function displayArticles(articles) {
         const articleElement = document.createElement('div');
         articleElement.className = 'article-item';
         articleElement.innerHTML = `
-            <input type="checkbox" id="${article.slug}" ${selectedArticles.includes(article.slug) ? 'checked' : ''}>
-            <label for="${article.slug}">${article.title}</label>
+            <input type="checkbox" id="${article.id}" ${selectedArticles.includes(article.id) ? 'checked' : ''}>
+            <label for="${article.id}">${article.title}</label>
         `;
-        articleElement.querySelector('input').addEventListener('change', (e) => toggleArticle(article.slug, e.target.checked));
+        articleElement.querySelector('input').addEventListener('change', (e) => toggleArticle(article.id, e.target.checked));
         articleList.appendChild(articleElement);
     });
 }
 
-function toggleArticle(slug, isSelected) {
-    if (isSelected && !selectedArticles.includes(slug)) {
+function toggleArticle(id, isSelected) {
+    if (isSelected && !selectedArticles.includes(id)) {
         if (selectedArticles.length < 10) {
-            selectedArticles.push(slug);
+            selectedArticles.push(id);
         } else {
             alert("You can only select up to 10 articles.");
-            document.getElementById(slug).checked = false;
+            document.getElementById(id).checked = false;
             return;
         }
     } else {
-        const index = selectedArticles.indexOf(slug);
+        const index = selectedArticles.indexOf(id);
         if (index > -1) {
             selectedArticles.splice(index, 1);
         }
@@ -129,22 +133,28 @@ function toggleArticle(slug, isSelected) {
 
 function updateGenerateButton() {
     const button = document.getElementById('generateDocument');
-    const outputFormat = document.querySelector('#customSelectionSection input[name="outputFormat"]:checked').value;
+    const outputFormat = 'pdf';
     button.textContent = `Generate ${outputFormat.toUpperCase()} (${selectedArticles.length} selected)`;
     button.disabled = selectedArticles.length === 0;
 }
 
 function fetchArticlesAndGenerateDocument() {
-    const apiKey = Cookies.get('omnivoreApiKey');
-    const archive = Cookies.get('omnivoreArchive') === 'true';
-    const twoColumnLayout = Cookies.get('omnivoreTwoColumnLayout') === 'true';
+    const apiKey = Cookies.get('readeckApiKey');
+    const readeckUrl = Cookies.get('readeckUrl');
+    const twoColumnLayout = Cookies.get('readeckTwoColumnLayout') === 'true';
     const tag = document.getElementById('tag').value;
-    const sort = document.getElementById('sort').value;
-    const outputFormat = document.querySelector('input[name="outputFormat"]:checked').value;
+
+    let sortInput = document.getElementById('sort').value;
+    let sort = sortInput === 'asc' ? 'created' : '-created';    
+    const outputFormat = 'pdf';
+
+    if (!apiKey || !readeckUrl) {
+        alert('Please set your API key and Readeck URL in the settings.');
+        return;
+    }
 
     updateProgressBar(0, 'Initiating article fetch...');
 
-    // First, fetch articles
     fetch('/fetch_articles', {
         method: 'POST',
         headers: {
@@ -152,16 +162,16 @@ function fetchArticlesAndGenerateDocument() {
             'X-CSRFToken': getCsrfToken(),
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ 
-            api_key: apiKey, 
-            tag: tag, 
+        body: JSON.stringify({
+            api_key: apiKey,
+            readeck_url: readeckUrl,
+            tag: tag,
             sort: sort
         }),
     })
     .then(response => response.json())
     .then(data => {
-        updateProgressBar(25, `Articles fetched. Initiating ${outputFormat.toUpperCase()} generation...`);
-        // Now generate document with the fetched articles
+        updateProgressBar(25, `Articles fetched. Initiating PDF generation...`);
         return fetch('/generate_document', {
             method: 'POST',
             headers: {
@@ -171,8 +181,8 @@ function fetchArticlesAndGenerateDocument() {
             credentials: 'same-origin',
             body: JSON.stringify({
                 api_key: apiKey,
-                archive: archive,
-                article_slugs: data.articles.map(article => article.slug),
+                readeck_url: readeckUrl,
+                article_ids: data.articles.map(article => article.id),
                 two_column_layout: twoColumnLayout,
                 output_format: outputFormat
             }),
@@ -194,7 +204,7 @@ function fetchArticlesAndGenerateDocument() {
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        updateProgressBar(100, `${outputFormat.toUpperCase()} generated and downloaded successfully!`);
+        updateProgressBar(100, `PDF generated and downloaded successfully!`);
     })
     .catch(error => {
         console.error('Error:', error);
@@ -203,15 +213,12 @@ function fetchArticlesAndGenerateDocument() {
 }
 
 function generateDocument() {
-    const apiKey = Cookies.get('omnivoreApiKey');
-    const archive = Cookies.get('omnivoreArchive') === 'true';
-    const twoColumnLayout = Cookies.get('omnivoreTwoColumnLayout') === 'true';
-    
-    // Get the selected output format from the custom selection section
-    const outputFormat = document.querySelector('#customSelectionSection input[name="outputFormat"]:checked').value;
-    
-    if (!apiKey) {
-        alert('Please set your API key in the settings.');
+    const apiKey = Cookies.get('readeckApiKey');
+    const readeckUrl = Cookies.get('readeckUrl');
+    const twoColumnLayout = Cookies.get('readeckTwoColumnLayout') === 'true';
+
+    if (!apiKey || !readeckUrl) {
+        alert('Please set your API key and Readeck URL in the settings.');
         return;
     }
 
@@ -228,13 +235,13 @@ function generateDocument() {
             'X-CSRFToken': getCsrfToken(),
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ 
-            api_key: apiKey, 
-            article_slugs: selectedArticles,
-            archive: archive,
-            two_column_layout: outputFormat === 'pdf' ? twoColumnLayout : false,
-            output_format: outputFormat,
-            emit_progress: true 
+        body: JSON.stringify({
+            api_key: apiKey,
+            readeck_url: readeckUrl,
+            article_ids: selectedArticles,
+            outputFormat: 'pdf',
+            two_column_layout: twoColumnLayout,
+            emit_progress: true,
         }),
     })
     .then(response => {
@@ -253,11 +260,11 @@ function generateDocument() {
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        updateProgressBar(100, `${outputFormat.toUpperCase()} generated and downloaded successfully!`);
+        updateProgressBar(100, `PDF generated and downloaded successfully!`);
     })
     .catch(error => {
         console.error('Error:', error);
-        updateProgressBar(100, `Error generating ${outputFormat.toUpperCase()}: ${error.error || 'An unexpected error occurred'}`);
+        updateProgressBar(100, `Error generating PDF: ${error.error || 'An unexpected error occurred'}`);
     })
     .finally(() => {
         generateButton.disabled = false;
@@ -269,22 +276,22 @@ function updateProgressBar(progress, status) {
     let progressContainer = document.getElementById('progressContainer');
     let progressBar = document.getElementById('progressBar');
     let statusText = document.getElementById('statusText');
-    
+
     progressContainer.classList.remove('hidden');
     progressBar.value = progress;
     statusText.innerHTML = `<span class="status-icon">➡️</span> <span class="status-message">${status}</span>`;
-    
+
     if (progress === 100) {
         setTimeout(() => {
             progressContainer.classList.add('hidden');
-        }, 5000);  // Hide after 5 seconds
+        }, 5000);
     }
 }
 
 function handleSearch(e) {
     const searchTerm = e.target.value.toLowerCase();
-    const filteredArticles = allArticles.filter(article => 
-        article.title.toLowerCase().includes(searchTerm) || 
+    const filteredArticles = allArticles.filter(article =>
+        article.title.toLowerCase().includes(searchTerm) ||
         (article.author && article.author.toLowerCase().includes(searchTerm))
     );
     displayArticles(filteredArticles);

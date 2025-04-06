@@ -46,14 +46,12 @@
     <h1>Settings</h1>
     
     <form id="settingsForm">
-        <p>An API key is required to access your <a href="https://omnivore.app/">Omnivore</a> articles. You can generate one <a href="https://omnivore.app/settings/api">here</a>. Your API key is sent to the server, but is not stored or logged. Settings are stored in a local cookie.</p>
+        <p>An API key is required to access your Readeck articles. Generate one through the settings on your installation. Settings are stored in a local cookie.</p>
         <div class="formItem">
             <input class="mb2 formInput" placeholder="API Key" type="text" id="apiKey" name="apiKey" required>
+            <input type="text" id="readeckUrl" placeholder="https://your.readeck.instance">
         </div>    
-        <div class="checkboxItem">
-            <label for="archive">Archive fetched articles:</label>
-            <input type="checkbox" id="archive" name="archive">
-        </div>
+
         <div class="checkboxItem">
             <label for="twoColumnLayout">Use two-column layout for PDFs:</label>
             <input type="checkbox" id="twoColumnLayout" name="twoColumnLayout">
@@ -68,18 +66,18 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const apiKeyInput = document.getElementById('apiKey');
-            const archiveCheckbox = document.getElementById('archive');
+            const readeckUrl = document.getElementById('readeckUrl').value;
             const twoColumnLayoutCheckbox = document.getElementById('twoColumnLayout');
-            const savedApiKey = Cookies.get('omnivoreApiKey');
-            const savedArchive = Cookies.get('omnivoreArchive');
-            const savedTwoColumnLayout = Cookies.get('omnivoreTwoColumnLayout');
-    
+            const savedApiKey = Cookies.get('readeckApiKey');
+            const savedTwoColumnLayout = Cookies.get('readeckTwoColumnLayout');    
+            const savedReadeckUrl = Cookies.get('readeckUrl');
+
+            if (savedReadeckUrl) {
+                document.getElementById('readeckUrl').value = savedReadeckUrl;
+            }
+
             if (savedApiKey) {
                 apiKeyInput.value = savedApiKey;
-            }
-    
-            if (savedArchive === 'true') {
-                archiveCheckbox.checked = true;
             }
 
             if (savedTwoColumnLayout === 'true') {
@@ -94,14 +92,14 @@
     
         function saveSettings() {
             const apiKey = document.getElementById('apiKey').value;
-            const archive = document.getElementById('archive').checked;
+            const readeckUrl = document.getElementById('readeckUrl').value;
             const twoColumnLayout = document.getElementById('twoColumnLayout').checked;
             const statusDiv = document.getElementById('status');
     
-            Cookies.set('omnivoreApiKey', apiKey, { expires: 30 });
-            Cookies.set('omnivoreArchive', archive, { expires: 30 });
-            Cookies.set('omnivoreTwoColumnLayout', twoColumnLayout, { expires: 30 });
-    
+            Cookies.set('readeckApiKey', apiKey, { expires: 30 });
+            Cookies.set('readeckTwoColumnLayout', twoColumnLayout, { expires: 30 });
+            Cookies.set('readeckUrl', readeckUrl, { expires: 30 });
+
             statusDiv.textContent = 'Settings saved successfully!';
         }
     </script>

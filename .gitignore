@@ -135,4 +135,6 @@ celerybeat.pid
 .dmypy.json
 dmypy.json
 
-repopack-output.txt
+logs/
+
+repomix-output.xml

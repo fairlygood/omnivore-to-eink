@@ -3,9 +3,7 @@ import logging
 from datetime import timedelta
 
 class Config:
-    # API endpoint
-    API_ENDPOINT = "https://api-prod.omnivore.app/api/graphql"
-    
+
     # Output directory for generated PDFs
     OUTPUT_DIR = os.path.abspath("output")
 

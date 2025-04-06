@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="black">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Omnivore to EINK Converter</title>
+    <title>Readeck PDF Exporter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.1/js.cookie.min.js"></script>
     <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
@@ -165,22 +165,25 @@
             display: flex;
             align-items: center;
         }
+        .w-full {
+            width: 100%;
+        }
 
 
     </style>
 </head>
 <body>
     <header>
-        <h1>Omnivore to E-Ink</h1>
+        <h1>Readeck PDF Exporter</h1>
         <p>A Fairly Good Web App</p>
     </header>
 
-    <p class="notice">This application will fetch a bunch of articles from <a href="https://omnivore.app">Omnivore</a> and generate a nicely formatted PDF suitable for large-format e-readers, or an EPUB file for other devices. </p>
+    <p class="notice">This application will fetch a bunch of articles from <a href="https://readeck.org/en/">Readeck</a> and generate a nicely formatted PDF suitable for large-format e-readers. </p>
 
     <div class="navContainer">
         <button id="recentLastBtn">Recent & Last</button>
         <button id="customSelectionBtn">Custom Selection</button>
-        <a class="button" href="{{ url_for('main.settings') }}">Settings</a>
+        <button id="settingsBtn" class="w-full">Settings</button>
     </div>
 
     <div id="settingsWarning" class="warning notice hidden">
@@ -198,15 +201,7 @@
                         <option value="asc">Oldest First</option>
                         <option value="dsc">Newest First</option>
                     </select> 
-                    <div class="formItem typeSelect">
-                        <label>
-                            <input type="radio" name="outputFormat" value="pdf" checked> PDF
-                        </label>
-                        <label>
-                            <input type="radio" name="outputFormat" value="epub"> EPUB
-                        </label>
-                    </div>
-                    <button type="submit">Fetch!</button>
+                    <button id="generateRecentLast" type="submit">Fetch!</button>
                 </div>
             </div>
         </form>
@@ -216,14 +211,6 @@
         <input type="text" id="searchInput" class="mb2 mt2" placeholder="Filter...">
         <div id="articleList" class="article-list mb2"></div>
         <div class="formRow2">
-            <div class="formItem typeSelect">
-                <label>
-                    <input type="radio" name="outputFormat" value="pdf" checked> PDF
-                </label>
-                <label>
-                    <input type="radio" name="outputFormat" value="epub"> EPUB
-                </label>
-            </div>
             <button id="generateDocument" disabled>Generate (0 selected)</button>
         </div>
 
